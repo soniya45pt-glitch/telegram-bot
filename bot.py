@@ -2,7 +2,7 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 
-TOKEN = os.getenv("8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM")
+TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
 
 if not TOKEN:
     print("TOKEN NOT FOUND")
