@@ -3,16 +3,12 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 
 TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
-
-if not TOKEN:
-    print("TOKEN NOT FOUND")
-    exit()
-
 ADMIN_ID = 6556890316
 
+# START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    context.application.user_data[user_id] = True
+    context.user_data["active"] = True
 
     keyboard = [
         [InlineKeyboardButton("💎 1 Month - $3.99", url="https://rzp.io/rzp/Oa0lD2k")],
@@ -28,6 +24,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+# BUTTON
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -41,39 +38,20 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.message.reply_text(f"Your ID: {user_id}")
 
+# ADMIN ACCESS
 async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id == ADMIN_ID:
         user_id = int(context.args[0])
 
         await context.bot.send_message(chat_id=user_id, text="Payment Successful 😏")
+        await context.bot.send_message(chat_id=user_id, text="Join Channel:\nhttps://t.me/yourchannel")
 
-        await context.bot.send_photo(
-            chat_id=user_id,
-            photo="https://i.ibb.co/LDTNZfnw"
-        )
-
-        await context.bot.send_message(
-            chat_id=user_id,
-            text="Join Channel:\nhttps://t.me/+1R4StxEOBEQ5YmNl"
-        )
-
-async def offer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id == ADMIN_ID:
-        for user_id in context.application.user_data:
-            try:
-                await context.bot.send_message(
-                    chat_id=user_id,
-                    text="🔥 30% OFF - 3 Month only $10.99"
-                )
-            except:
-                pass
-
+# RUN
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CallbackQueryHandler(button))
 app.add_handler(CommandHandler("access", access))
-app.add_handler(CommandHandler("offer", offer))
 
 print("Bot Running...")
 app.run_polling()
