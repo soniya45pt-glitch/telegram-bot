@@ -19,7 +19,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await update.message.reply_photo(
-        photo="https://i.ibb.co/LDTNZfnw",
+        photo="https://ibb.co/LDTNZfnw",
         caption="🔥 Choose your plan",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
