@@ -7,11 +7,11 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # ===== CONFIG =====
-TOKEN = os.getenv("8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AMN")
+TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AMN"
 
-RAZORPAY_KEY = os.getenv("rzp_test_Sc7bAjtKJyImk1Y")
-RAZORPAY_SECRET = os.getenv("WbbKOcitkM2fvurkLpGi2vOD")
-WEBHOOK_SECRET = os.getenv("riyorax123")
+RAZORPAY_KEY = "rzp_test_Sc7bAjtKJyImk1Y"
+RAZORPAY_SECRET = "WbbKOcitkM2fvurkLpGi2vOD"
+WEBHOOK_SECRET = "riyorax123"
 
 client = razorpay.Client(auth=(RAZORPAY_KEY, RAZORPAY_SECRET))
 
