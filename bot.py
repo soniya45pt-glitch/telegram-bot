@@ -9,8 +9,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 # ===== CONFIG =====
 TOKEN = "8621358668:AAEDOhQKuPONhjpYunWONwnlZf46lT1IPZM"
 
-RAZORPAY_KEY = "rzp_test_Sc7bAjtKJyImk1Y"
-RAZORPAY_SECRET = "WbbKOcitkM2fvurkLpGi2vOD"
+RAZORPAY_KEY = "rzp_test_Sc8aWzlO5mDpTw"
+RAZORPAY_SECRET = "czM9tZFA43yGGGFkBtebrPdL"
 WEBHOOK_SECRET = "riyorax123"
 
 client = razorpay.Client(auth=(RAZORPAY_KEY, RAZORPAY_SECRET))
