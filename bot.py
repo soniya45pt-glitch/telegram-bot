@@ -2,13 +2,14 @@ import os
 import hmac
 import hashlib
 import razorpay
+import asyncio
 from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-import threading
 
 # ===== CONFIG =====
 TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
+
 
 RAZORPAY_KEY = "rzp_test_Sc6yE8eA5QA0QD"
 RAZORPAY_SECRET = "WbbKOcitkM2fvurkLpGi2vOD"
@@ -19,23 +20,19 @@ client = razorpay.Client(auth=(RAZORPAY_KEY, RAZORPAY_SECRET))
 app = Flask(__name__)
 tg_app = ApplicationBuilder().token(TOKEN).build()
 
-# user order mapping
 user_orders = {}
 
-# ===== START COMMAND =====
+# ===== START =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
-    # create razorpay order (₹210)
     order = client.order.create({
-        "amount": 21000,  # ₹210
+        "amount": 21000,
         "currency": "INR",
         "payment_capture": 1
     })
 
     order_id = order["id"]
-
-    # save order with user
     user_orders[order_id] = user_id
 
     payment_link = f"https://rzp.io/rzp/Oa0lD2k?order_id={order_id}"
@@ -66,7 +63,7 @@ def webhook():
     ).hexdigest()
 
     if generated_sig != received_sig:
-        return "Invalid signature", 400
+        return "Invalid", 400
 
     data = request.json
 
@@ -76,23 +73,26 @@ def webhook():
         if order_id in user_orders:
             user_id = user_orders[order_id]
 
-            try:
+            asyncio.run(
                 tg_app.bot.send_message(
                     chat_id=user_id,
-                    text="✅ Payment Successful!\n\nContact support: @riyoraxsupport"
+                    text="✅ Payment Successful!\n\nContact: @riyoraxsupport"
                 )
-            except Exception as e:
-                print(e)
+            )
 
     return "OK", 200
 
-# ===== RUN BOTH =====
-def run_bot():
+# ===== MAIN =====
+async def main():
     print("Bot Running...")
-    tg_app.run_polling()
+    await tg_app.initialize()
+    await tg_app.start()
+    await tg_app.updater.start_polling()
 
-def run_flask():
-    app.run(host="0.0.0.0", port=8080)
+# ===== RUN =====
+if __name__ == "__main__":
+    import threading
 
-threading.Thread(target=run_bot).start()
-threading.Thread(target=run_flask).start()
+    threading.Thread(target=lambda: app.run(host="0.0.0.0", port=8080)).start()
+
+    asyncio.run(main())
