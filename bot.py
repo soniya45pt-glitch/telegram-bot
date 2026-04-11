@@ -1,28 +1,58 @@
+import asyncio
+import random
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from database import add_user, is_paid
 
 TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
-ADMIN_ID = 6556890316
 
 # START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    context.user_data["active"] = True
+    user_id = update.effective_user.id
+    add_user(user_id)
 
-    keyboard = [
-        [InlineKeyboardButton("💎 1 Month - $3.99", url="https://rzp.io/rzp/Oa0lD2k")],
-        [InlineKeyboardButton("🔥 2 Months - $6.99", url="https://rzp.io/rzp/Oa0lD2k")],
-        [InlineKeyboardButton("👑 3 Months - $12.99", url="https://rzp.io/rzp/Oa0lD2k")],
-        [InlineKeyboardButton("🎁 Offer - $10.99", url="https://rzp.io/rzp/Oa0lD2k")],
-        [InlineKeyboardButton("✅ I Paid", callback_data="paid")]
-    ]
+    chat_id = update.effective_chat.id
 
-    await update.message.reply_photo(
-        photo="https://ibb.co/LDTNZfnw",
-        caption="🔥 Choose your plan",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+    await typing(context, chat_id)
+
+    await update.message.reply_text("💚 Hey baby... listen to me 😘")
+
+    asyncio.create_task(flow(chat_id, context, user_id))
+
+
+# TYPING
+async def typing(context, chat_id):
+    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+    await asyncio.sleep(random.randint(2, 4))
+
+
+# VOICE SEND
+async def send_voice(context, chat_id):
+    await context.bot.send_voice(
+        chat_id=chat_id,
+        voice=open("voice.ogg", "rb"),
+        caption="💚 Listen carefully..."
     )
+
+
+# FLOW
+async def flow(chat_id, context, user_id):
+
+    await asyncio.sleep(10)
+    if not is_paid(user_id):
+        await typing(context, chat_id)
+        await context.bot.send_message(chat_id, "I'm waiting for you 😈")
+
+    await asyncio.sleep(10)
+    if not is_paid(user_id):
+        await send_voice(context, chat_id)
+
+    await asyncio.sleep(15)
+    if not is_paid(user_id):
+        keyboard = [[InlineKeyboardButton("💸 Buy Now", callback_data="buy")]]
+        await context.bot.send_message(chat_id, "Unlock me baby 🔥", reply_markup=InlineKeyboardMarkup(keyboard))
+
 
 # BUTTON
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -31,27 +61,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = query.from_user.id
 
-    await context.bot.send_message(
-        chat_id=ADMIN_ID,
-        text=f"New Payment User ID: {user_id}"
-    )
+    payment_link = f"https://rzp.io/l/YOUR_LINK?user_id={user_id}"
 
-    await query.message.reply_text(f"Your ID: {user_id}")
+    if query.data == "buy":
+        await query.message.reply_text(f"💳 Pay here:\n{payment_link}")
 
-# ADMIN ACCESS
-async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id == ADMIN_ID:
-        user_id = int(context.args[0])
 
-        await context.bot.send_message(chat_id=user_id, text="Payment Successful 😏")
-        await context.bot.send_message(chat_id=user_id, text="Join Channel:\nhttps://t.me/yourchannel")
-
-# RUN
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CallbackQueryHandler(button))
-app.add_handler(CommandHandler("access", access))
 
+print("Bot Running...")
+app.run_polling()
 print("Bot Running...")
 app.run_polling()
