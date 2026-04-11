@@ -38,9 +38,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [InlineKeyboardButton("💳 Pay ₹210", url=payment_link)],
-        [InlineKeyboardButton("🆘 Support", url="https://t.me/riyoraxsupport")]
-    ]
-
+        
     await update.message.reply_photo(
         photo="https://kommodo.ai/i/x1cFUgjJQt009Fnvnel5",
         caption="🔥 Premium Access\n\nPay ₹210 to unlock full access",
