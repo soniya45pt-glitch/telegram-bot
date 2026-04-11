@@ -1,95 +1,98 @@
 import os
+import hmac
+import hashlib
 import razorpay
-import requests
 from flask import Flask, request
-from threading import Thread
-
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import threading
 
-# ENV VARIABLES
-TOKEN ="8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
+# ===== CONFIG =====
+TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
 
-RAZORPAY_KEY_ID = "rzp_test_Sc7bAjtKJyImk1"
+RAZORPAY_KEY = "rzp_test_Sc6yE8eA5QA0QD"
+RAZORPAY_SECRET = "WbbKOcitkM2fvurkLpGi2vOD"
+WEBHOOK_SECRET = "riyorax123"
 
-RAZORPAY_KEY_SECRET = "WbbKOcitkM2fvurkLpGi2vOD"
+client = razorpay.Client(auth=(RAZORPAY_KEY, RAZORPAY_SECRET))
 
-# INIT
-client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 app = Flask(__name__)
-
 tg_app = ApplicationBuilder().token(TOKEN).build()
 
-# START COMMAND
+# user order mapping
+user_orders = {}
+
+# ===== START COMMAND =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
-    # CREATE ORDER ₹199
+    # create razorpay order (₹210)
     order = client.order.create({
-        "amount": 19900,
+        "amount": 21000,  # ₹210
         "currency": "INR",
-        "payment_capture": 1,
-        "notes": {"user_id": str(user_id)}
+        "payment_capture": 1
     })
 
-    pay_url = f"https://rzp.io/l/{order['id']}"
+    order_id = order["id"]
+
+    # save order with user
+    user_orders[order_id] = user_id
+
+    payment_link = f"https://rzp.io/rzp/Oa0lD2k?order_id={order_id}"
 
     keyboard = [
-        [InlineKeyboardButton("💳 Buy Subscription ₹199", url=pay_url)],
-        [InlineKeyboardButton("📞 Support", url="https://t.me/riyoraxsupport")]
+        [InlineKeyboardButton("💳 Pay ₹210", url=payment_link)],
+        [InlineKeyboardButton("🆘 Support", url="https://t.me/riyoraxsupport")]
     ]
 
     await update.message.reply_photo(
         photo="https://kommodo.ai/i/x1cFUgjJQt009Fnvnel5",
-        caption="🔥 Buy Premium Plan ₹199\n\n💎 Instant access after payment",
+        caption="🔥 Premium Access\n\nPay ₹210 to unlock full access",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-    # Reminder after 60 sec
-    async def reminder():
-        import asyncio
-        await asyncio.sleep(60)
-        try:
-            await context.bot.send_message(
-                chat_id=user_id,
-                text="⏳ You haven’t purchased yet.\nBuy now to unlock access 😏"
-            )
-        except:
-            pass
-
-    context.application.create_task(reminder())
-
-
-# WEBHOOK (AUTO PAYMENT DETECT)
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    data = request.json
-
-    if data.get("event") == "payment.captured":
-        payment = data["payload"]["payment"]["entity"]
-        user_id = payment.get("notes", {}).get("user_id")
-
-        if user_id:
-            requests.post(
-                f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                json={
-                    "chat_id": user_id,
-                    "text": "🎉 Payment Successful ✅\n\nContact support to get access:\n👉 @riyoraxsupport"
-                }
-            )
-
-    return "ok"
-
-
-# HANDLER
 tg_app.add_handler(CommandHandler("start", start))
 
+# ===== WEBHOOK =====
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    body = request.data
+    received_sig = request.headers.get("X-Razorpay-Signature")
 
-# RUN BOTH
-if __name__ == "__main__":
-    # Run Flask in background
-    Thread(target=lambda: app.run(host="0.0.0.0", port=8080)).start()
+    generated_sig = hmac.new(
+        bytes(WEBHOOK_SECRET, 'utf-8'),
+        body,
+        hashlib.sha256
+    ).hexdigest()
 
-    # Run Telegram bot
+    if generated_sig != received_sig:
+        return "Invalid signature", 400
+
+    data = request.json
+
+    if data["event"] == "payment.captured":
+        order_id = data["payload"]["payment"]["entity"]["order_id"]
+
+        if order_id in user_orders:
+            user_id = user_orders[order_id]
+
+            try:
+                tg_app.bot.send_message(
+                    chat_id=user_id,
+                    text="✅ Payment Successful!\n\nContact support: @riyoraxsupport"
+                )
+            except Exception as e:
+                print(e)
+
+    return "OK", 200
+
+# ===== RUN BOTH =====
+def run_bot():
     print("Bot Running...")
     tg_app.run_polling()
+
+def run_flask():
+    app.run(host="0.0.0.0", port=8080)
+
+threading.Thread(target=run_bot).start()
+threading.Thread(target=run_flask).start()
