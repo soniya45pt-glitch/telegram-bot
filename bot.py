@@ -1,78 +1,103 @@
-import asyncio
-import random
 import os
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-from database import add_user, is_paid
+import razorpay
+import threading
+import requests
+from flask import Flask, request
 
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+
+# ENV VARIABLES
 TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
 
-# START
+RAZORPAY_KEY_ID = "rzp_test_Sc6yE8eA5QA0QD"
+RAZORPAY_KEY_SECRET = "riyorax123"
+
+# INIT
+client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+app = Flask(__name__)
+
+tg_app = ApplicationBuilder().token(TOKEN).build()
+
+# START COMMAND
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    add_user(user_id)
+    user_id = update.message.from_user.id
 
-    chat_id = update.effective_chat.id
+    # CREATE ORDER (₹199)
+    order = client.order.create({
+        "amount": 19900,
+        "currency": "INR",
+        "payment_capture": 1,
+        "notes": {
+            "user_id": str(user_id)
+        }
+    })
 
-    await typing(context, chat_id)
+    order_id = order["id"]
 
-    await update.message.reply_text("💚 Hey baby... listen to me 😘")
+    # PAYMENT LINK
+    pay_url = f"https://rzp.io/l/{order_id}"
 
-    asyncio.create_task(flow(chat_id, context, user_id))
+    keyboard = [
+        [InlineKeyboardButton("💳 Buy Subscription ₹199", url=pay_url)],
+        [InlineKeyboardButton("📞 Support", url="https://t.me/riyoraxsupport")]
+    ]
 
-
-# TYPING
-async def typing(context, chat_id):
-    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
-    await asyncio.sleep(random.randint(2, 4))
-
-
-# VOICE SEND
-async def send_voice(context, chat_id):
-    await context.bot.send_voice(
-        chat_id=chat_id,
-        voice=open("voice.ogg", "rb"),
-        caption="💚 Listen carefully..."
+    # SEND IMAGE + BUTTON
+    await update.message.reply_photo(
+        photo="https://i.ibb.co/1B4Z7Py",
+        caption="🔥 Buy Premium Plan ₹199\n\n💎 Instant access after payment",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+    # REMINDER MESSAGE (after 60 sec)
+    async def reminder():
+        import asyncio
+        await asyncio.sleep(60)
 
-# FLOW
-async def flow(chat_id, context, user_id):
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="⏳ You haven't purchased yet.\nBuy now to unlock access 😏"
+            )
+        except:
+            pass
 
-    await asyncio.sleep(10)
-    if not is_paid(user_id):
-        await typing(context, chat_id)
-        await context.bot.send_message(chat_id, "I'm waiting for you 😈")
-
-    await asyncio.sleep(10)
-    if not is_paid(user_id):
-        await send_voice(context, chat_id)
-
-    await asyncio.sleep(15)
-    if not is_paid(user_id):
-        keyboard = [[InlineKeyboardButton("💸 Buy Now", callback_data="buy")]]
-        await context.bot.send_message(chat_id, "Unlock me baby 🔥", reply_markup=InlineKeyboardMarkup(keyboard))
+    context.application.create_task(reminder())
 
 
-# BUTTON
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+# WEBHOOK (AUTO PAYMENT DETECT)
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    data = request.json
 
-    user_id = query.from_user.id
+    if data.get("event") == "payment.captured":
+        payment = data["payload"]["payment"]["entity"]
 
-    payment_link = f"https://rzp.io/l/YOUR_LINK?user_id={user_id}"
+        user_id = payment.get("notes", {}).get("user_id")
 
-    if query.data == "buy":
-        await query.message.reply_text(f"💳 Pay here:\n{payment_link}")
+        if user_id:
+            requests.post(
+                f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                json={
+                    "chat_id": user_id,
+                    "text": "🎉 Payment Successful ✅\n\nYour payment has been received.\n\n📞 Contact support to get access:\n👉 @riyoraxsupport"
+                }
+            )
+
+    return "ok"
 
 
-app = ApplicationBuilder().token(TOKEN).build()
+# HANDLER
+tg_app.add_handler(CommandHandler("start", start))
 
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CallbackQueryHandler(button))
 
-print("Bot Running...")
-app.run_polling()
-print("Bot Running...")
+# RUN BOT + WEBHOOK SERVER
+def run_bot():
+    tg_app.run_polling()
+
+
+if __name__ == "__main__":
+    threading.Thread(target=run_bot).start()
+    app.run(host="0.0.0.0", port=8080)
 app.run_polling()
