@@ -1,13 +1,14 @@
 import os
 import razorpay
-import threading
 import requests
+import asyncio
 from flask import Flask, request
+from threading import Thread
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# ENV VARIABLES
+# ENV
 TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
 
 RAZORPAY_KEY_ID = "rzp_test_Sc6yE8eA5QA0QD"
@@ -19,61 +20,37 @@ app = Flask(__name__)
 
 tg_app = ApplicationBuilder().token(TOKEN).build()
 
-# START COMMAND
+# START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
-    # CREATE ORDER (₹199)
     order = client.order.create({
         "amount": 19900,
         "currency": "INR",
         "payment_capture": 1,
-        "notes": {
-            "user_id": str(user_id)
-        }
+        "notes": {"user_id": str(user_id)}
     })
 
-    order_id = order["id"]
-
-    # PAYMENT LINK
-    pay_url = f"https://rzp.io/l/{order_id}"
+    pay_url = f"https://rzp.io/l/{order['id']}"
 
     keyboard = [
-        [InlineKeyboardButton("💳 Buy Subscription ₹199", url=pay_url)],
+        [InlineKeyboardButton("💳 Buy ₹199", url=pay_url)],
         [InlineKeyboardButton("📞 Support", url="https://t.me/riyoraxsupport")]
     ]
 
-    # SEND IMAGE + BUTTON
     await update.message.reply_photo(
         photo="https://i.ibb.co/1B4Z7Py",
-        caption="🔥 Buy Premium Plan ₹199\n\n💎 Instant access after payment",
+        caption="🔥 Buy Premium Plan ₹199",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-    # REMINDER MESSAGE (after 60 sec)
-    async def reminder():
-        import asyncio
-        await asyncio.sleep(60)
-
-        try:
-            await context.bot.send_message(
-                chat_id=user_id,
-                text="⏳ You haven't purchased yet.\nBuy now to unlock access 😏"
-            )
-        except:
-            pass
-
-    context.application.create_task(reminder())
-
-
-# WEBHOOK (AUTO PAYMENT DETECT)
+# WEBHOOK
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.json
 
     if data.get("event") == "payment.captured":
         payment = data["payload"]["payment"]["entity"]
-
         user_id = payment.get("notes", {}).get("user_id")
 
         if user_id:
@@ -81,23 +58,27 @@ def webhook():
                 f"https://api.telegram.org/bot{TOKEN}/sendMessage",
                 json={
                     "chat_id": user_id,
-                    "text": "🎉 Payment Successful ✅\n\nYour payment has been received.\n\n📞 Contact support to get access:\n👉 @riyoraxsupport"
+                    "text": "✅ Payment Successful!\nContact: @riyoraxsupport"
                 }
             )
 
     return "ok"
 
-
 # HANDLER
 tg_app.add_handler(CommandHandler("start", start))
 
+# RUN BOT (FIXED)
+async def run_bot():
+    await tg_app.initialize()
+    await tg_app.start()
+    await tg_app.updater.start_polling()
 
-# RUN BOT + WEBHOOK SERVER
-def run_bot():
-    tg_app.run_polling()
-
-
+# MAIN
 if __name__ == "__main__":
-    threading.Thread(target=run_bot).start()
+    loop = asyncio.get_event_loop()
+
+    # run bot in background
+    loop.create_task(run_bot())
+
+    # run flask
     app.run(host="0.0.0.0", port=8080)
-app.run_polling()
