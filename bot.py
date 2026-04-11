@@ -2,18 +2,16 @@ import os
 import hmac
 import hashlib
 import razorpay
-import asyncio
 from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # ===== CONFIG =====
-TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
+TOKEN = os.getenv("8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AMN")
 
-
-RAZORPAY_KEY = "rzp_test_Sc6yE8eA5QA0QD"
-RAZORPAY_SECRET = "WbbKOcitkM2fvurkLpGi2vOD"
-WEBHOOK_SECRET = "riyorax123"
+RAZORPAY_KEY = os.getenv("rzp_test_Sc7bAjtKJyImk1Y")
+RAZORPAY_SECRET = os.getenv("WbbKOcitkM2fvurkLpGi2vOD")
+WEBHOOK_SECRET = os.getenv("riyorax123")
 
 client = razorpay.Client(auth=(RAZORPAY_KEY, RAZORPAY_SECRET))
 
@@ -22,12 +20,13 @@ tg_app = ApplicationBuilder().token(TOKEN).build()
 
 user_orders = {}
 
-# ===== START =====
+# ===== START COMMAND =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
+    # Create Razorpay order
     order = client.order.create({
-        "amount": 21000,
+        "amount": 21000,  # ₹210
         "currency": "INR",
         "payment_capture": 1
     })
@@ -50,7 +49,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 tg_app.add_handler(CommandHandler("start", start))
 
-# ===== WEBHOOK =====
+# ===== WEBHOOK (RAZORPAY) =====
 @app.route("/webhook", methods=["POST"])
 def webhook():
     body = request.data
@@ -63,7 +62,7 @@ def webhook():
     ).hexdigest()
 
     if generated_sig != received_sig:
-        return "Invalid", 400
+        return "Invalid signature", 400
 
     data = request.json
 
@@ -73,26 +72,25 @@ def webhook():
         if order_id in user_orders:
             user_id = user_orders[order_id]
 
+            import asyncio
             asyncio.run(
                 tg_app.bot.send_message(
                     chat_id=user_id,
-                    text="✅ Payment Successful!\n\nContact: @riyoraxsupport"
+                    text="✅ Payment Successful!\n\nContact support: @riyoraxsupport"
                 )
             )
 
     return "OK", 200
 
-# ===== MAIN =====
-async def main():
-    print("Bot Running...")
-    await tg_app.initialize()
-    await tg_app.start()
-    await tg_app.updater.start_polling()
-
-# ===== RUN =====
+# ===== RUN BOTH =====
 if __name__ == "__main__":
     import threading
 
-    threading.Thread(target=lambda: app.run(host="0.0.0.0", port=8080)).start()
+    # Run Flask (webhook server)
+    threading.Thread(
+        target=lambda: app.run(host="0.0.0.0", port=8080)
+    ).start()
 
-    asyncio.run(main())
+    # Run Telegram bot (polling)
+    print("Bot Running...")
+    tg_app.run_polling()
