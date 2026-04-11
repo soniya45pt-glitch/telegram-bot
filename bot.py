@@ -7,7 +7,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # ===== CONFIG =====
-TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AMN"
+TOKEN = "8621358668:AAEDOhQKuPONhjpYunWONwnlZf46lT1IPZM"
 
 RAZORPAY_KEY = "rzp_test_Sc7bAjtKJyImk1Y"
 RAZORPAY_SECRET = "WbbKOcitkM2fvurkLpGi2vOD"
