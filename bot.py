@@ -40,7 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await update.message.reply_photo(
-        photo="https://i.ibb.co/1B4Z7Py",
+        photo="https://kommodo.ai/i/x1cFUgjJQt009Fnvnel5",
         caption="🔥 Buy Premium Plan ₹199\n\n💎 Instant access after payment",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
