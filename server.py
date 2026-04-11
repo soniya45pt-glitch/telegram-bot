@@ -4,7 +4,7 @@ from database import set_paid
 
 app = Flask(__name__)
 
-SECRET = os.getenv("mysecret12")
+SECRET = os.getenv("riyorax123")
 BOT_TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
 
 
