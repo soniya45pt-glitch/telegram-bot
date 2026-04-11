@@ -1,17 +1,17 @@
 import os
 import razorpay
 import requests
-import asyncio
 from flask import Flask, request
 from threading import Thread
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# ENV
-TOKEN = "8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
+# ENV VARIABLES
+TOKEN ="8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
 
 RAZORPAY_KEY_ID = "rzp_test_Sc6yE8eA5QA0QD"
+
 RAZORPAY_KEY_SECRET = "riyorax123"
 
 # INIT
@@ -20,10 +20,11 @@ app = Flask(__name__)
 
 tg_app = ApplicationBuilder().token(TOKEN).build()
 
-# START
+# START COMMAND
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
+    # CREATE ORDER ₹199
     order = client.order.create({
         "amount": 19900,
         "currency": "INR",
@@ -34,17 +35,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pay_url = f"https://rzp.io/l/{order['id']}"
 
     keyboard = [
-        [InlineKeyboardButton("💳 Buy ₹199", url=pay_url)],
+        [InlineKeyboardButton("💳 Buy Subscription ₹199", url=pay_url)],
         [InlineKeyboardButton("📞 Support", url="https://t.me/riyoraxsupport")]
     ]
 
     await update.message.reply_photo(
         photo="https://i.ibb.co/1B4Z7Py",
-        caption="🔥 Buy Premium Plan ₹199",
+        caption="🔥 Buy Premium Plan ₹199\n\n💎 Instant access after payment",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# WEBHOOK
+    # Reminder after 60 sec
+    async def reminder():
+        import asyncio
+        await asyncio.sleep(60)
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="⏳ You haven’t purchased yet.\nBuy now to unlock access 😏"
+            )
+        except:
+            pass
+
+    context.application.create_task(reminder())
+
+
+# WEBHOOK (AUTO PAYMENT DETECT)
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.json
@@ -58,27 +74,22 @@ def webhook():
                 f"https://api.telegram.org/bot{TOKEN}/sendMessage",
                 json={
                     "chat_id": user_id,
-                    "text": "✅ Payment Successful!\nContact: @riyoraxsupport"
+                    "text": "🎉 Payment Successful ✅\n\nContact support to get access:\n👉 @riyoraxsupport"
                 }
             )
 
     return "ok"
 
+
 # HANDLER
 tg_app.add_handler(CommandHandler("start", start))
 
-# RUN BOT (FIXED)
-async def run_bot():
-    await tg_app.initialize()
-    await tg_app.start()
-    await tg_app.updater.start_polling()
 
-# MAIN
+# RUN BOTH
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
+    # Run Flask in background
+    Thread(target=lambda: app.run(host="0.0.0.0", port=8080)).start()
 
-    # run bot in background
-    loop.create_task(run_bot())
-
-    # run flask
-    app.run(host="0.0.0.0", port=8080)
+    # Run Telegram bot
+    print("Bot Running...")
+    tg_app.run_polling()
