@@ -10,9 +10,9 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 # ENV VARIABLES
 TOKEN ="8621358668:AAEzPQCtDTlWauYltL8kzkWBZ1h-oPwr-AM"
 
-RAZORPAY_KEY_ID = "rzp_test_Sc6yE8eA5QA0QD"
+RAZORPAY_KEY_ID = "rzp_test_Sc7bAjtKJyImk1"
 
-RAZORPAY_KEY_SECRET = "riyorax123"
+RAZORPAY_KEY_SECRET = "WbbKOcitkM2fvurkLpGi2vOD"
 
 # INIT
 client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
