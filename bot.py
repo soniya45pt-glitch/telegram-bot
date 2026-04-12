@@ -14,9 +14,9 @@ PHOTO_CHANNEL = "https://t.me/+z3WIRBU88qo1MWNl"
 VIDEO_CHANNEL = "https://t.me/+fdz3Bwf5d9g0NjU1"
 VIP_CHANNEL = "https://t.me/riyoraxsupport"
 
-PHOTO1 = "https://kommodo.ai/i/iUd6mrIbiFfxCBq90AAk"
+PHOTO1 = "https://kommodo.ai/i/P2L3WhbCt4oTPQfaGVYf"
 PHOTO2 = "https://kommodo.ai/i/8poyQXs6LiEYbgQKS86N"
-PHOTO3 = "https://kommodo.ai/i/P2L3WhbCt4oTPQfaGVYf"
+PHOTO3 = "https://kommodo.ai/i/iUd6mrIbiFfxCBq90AAk"
 
 PAY_210 = "https://rzp.io/rzp/jYJzQXV"
 PAY_310 = "https://rzp.io/rzp/TB73Ea9K"
