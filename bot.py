@@ -10,8 +10,8 @@ ADMIN_ID = 6556890316
 
 SUPPORT_USERNAME = "riyoraxsupport"
 
-PHOTO_CHANNEL = "https://t.me/+z3WIRBU88qo1MWNl"
-VIDEO_CHANNEL = "https://t.me/+fdz3Bwf5d9g0NjU1"
+PHOTO_CHANNEL = "https://t.me/+Rw0Ok8hEhbI1N2U1"
+VIDEO_CHANNEL = "https://t.me/+Rw0Ok8hEhbI1N2U1"
 VIP_CHANNEL = "https://t.me/riyoraxsupport"
 
 PHOTO1 = "https://kommodo.ai/i/P2L3WhbCt4oTPQfaGVYf"
