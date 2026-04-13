@@ -26,73 +26,70 @@ SUPPORT = "@riyoraxsupport"
 
 logging.basicConfig(level=logging.INFO)
 
-# 🟢 START
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-
-    keyboard = [
+# 🟢 BUTTONS
+def get_buttons():
+    return InlineKeyboardMarkup([
         [InlineKeyboardButton("💎 ₹210 Photo Access", url=PAY_210)],
-        [InlineKeyboardButton("🔥 ₹310 Video Access", url=PAY_310)],
-        [InlineKeyboardButton("👑 ₹510 Video Call Access", url=PAY_510)],
+        [InlineKeyboardButton("🎬 ₹310 Video Access", url=PAY_310)],
+        [InlineKeyboardButton("📞 ₹510 Video Call Access", url=PAY_510)],
         [InlineKeyboardButton("✅ I Paid", callback_data="paid")],
         [InlineKeyboardButton("📞 Support", url=f"https://t.me/{SUPPORT.replace('@','')}")]
-    ]
+    ])
 
+# 🚀 START
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_photo(
         photo=PHOTO1,
         caption="🔥 Choose Your Plan & Unlock Access 🔥",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=get_buttons()
     )
 
-    asyncio.create_task(send_followups(update, context))
+    asyncio.create_task(followup(update, context))
 
-
-# ⏳ AUTO FOLLOW MESSAGES
-async def send_followups(update, context):
+# ⏳ FOLLOWUPS
+async def followup(update, context):
     chat_id = update.effective_chat.id
 
-    keyboard = [
-        [InlineKeyboardButton("💎 ₹210 Photo Access", url=PAY_210)],
-        [InlineKeyboardButton("🔥 ₹310 Video Access", url=PAY_310)],
-        [InlineKeyboardButton("👑 ₹510 Video Call Access", url=PAY_510)],
-        [InlineKeyboardButton("📞 Support", url=f"https://t.me/{SUPPORT.replace('@','')}")]
-    ]
+    await asyncio.sleep(900)
+    await context.bot.send_photo(chat_id, PHOTO2, caption="⚡ Limited Offer!", reply_markup=get_buttons())
 
     await asyncio.sleep(900)
-    await context.bot.send_photo(chat_id, PHOTO2, caption="⏳ Limited Time Offer!", reply_markup=InlineKeyboardMarkup(keyboard))
+    await context.bot.send_photo(chat_id, PHOTO3, caption="🔥 Last Chance!", reply_markup=get_buttons())
 
-    await asyncio.sleep(900)
-    await context.bot.send_photo(chat_id, PHOTO3, caption="⚡ Last Chance to Unlock Access!", reply_markup=InlineKeyboardMarkup(keyboard))
-
-
-# 💰 I PAID CLICK
-async def paid_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# 💰 I PAID
+async def paid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user = query.from_user
 
+    await query.answer()
+
     username = f"@{user.username}" if user.username else "No Username"
 
-    msg = f"""
-💰 NEW PAYMENT REQUEST
+    text = f"""
+💰 *NEW PAYMENT REQUEST*
 
 👤 Name: {user.first_name}
 🔗 Username: {username}
-🆔 ID: {user.id}
+🆔 ID: `{user.id}`
 
 👉 Approve:
-/access {user.id} 210
+`/access {user.id} 210`
+`/access {user.id} 310`
+`/access {user.id} 510`
 
 👉 Reject:
-/unaccess {user.id}
+`/unaccess {user.id}`
 """
 
-    await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
+    await context.bot.send_message(
+        chat_id=ADMIN_ID,
+        text=text,
+        parse_mode="Markdown"
+    )
 
-    await query.answer("Request sent to admin!")
-    await query.message.reply_text("✅ Request sent! Please wait for approval.")
+    await query.message.reply_text("✅ Request sent! Wait for admin approval.")
 
-
-# ✅ ACCESS COMMAND
+# ✅ ACCESS
 async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -114,11 +111,10 @@ async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Invalid plan")
         return
 
-    await context.bot.send_message(user_id, f"✅ Access Granted!\nJoin here: {link}")
+    await context.bot.send_message(user_id, f"✅ Access Granted!\nJoin here:\n{link}")
     await update.message.reply_text("✅ Done")
 
-
-# ❌ UNACCESS COMMAND
+# ❌ UNACCESS
 async def unaccess(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -132,14 +128,13 @@ async def unaccess(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(user_id, "❌ Access Denied by Admin")
     await update.message.reply_text("❌ Done")
 
-
-# 🚀 RUN BOT
+# 🚀 RUN
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("access", access))
 app.add_handler(CommandHandler("unaccess", unaccess))
-app.add_handler(CallbackQueryHandler(paid_callback, pattern="paid"))
+app.add_handler(CallbackQueryHandler(paid, pattern="paid"))
 
 print("Bot Running...")
 app.run_polling()
