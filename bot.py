@@ -1,85 +1,105 @@
-import os
 import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 TOKEN = "8621358668:AAEDOhQKuPONhjpYunWONwnlZf46lT1IPZM"
-
-# 🔥 EDIT THESE
 ADMIN_ID = 6556890316
 
-SUPPORT_USERNAME = "riyoraxsupport"
-
-PHOTO_CHANNEL = "https://t.me/+Rw0Ok8hEhbI1N2U1"
-VIDEO_CHANNEL = "https://t.me/+Rw0Ok8hEhbI1N2U1"
-VIP_CHANNEL = "https://t.me/riyoraxsupport"
-
+# 🔥 LINKS
 PHOTO1 = "https://kommodo.ai/i/P2L3WhbCt4oTPQfaGVYf"
 PHOTO2 = "https://kommodo.ai/i/8poyQXs6LiEYbgQKS86N"
 PHOTO3 = "https://kommodo.ai/i/iUd6mrIbiFfxCBq90AAk"
 
-PAY_210 = "https://rzp.io/rzp/jYJzQXV"
-PAY_310 = "https://rzp.io/rzp/TB73Ea9K"
-PAY_510 = "https://rzp.io/rzp/74RIEDVK"
+PAY_210 = "https://rzp.io/rzp/EeA4ZDf"
+PAY_310 = "https://rzp.io/rzp/ToyNdQ5"
+PAY_510 = "https://rzp.io/rzp/Lk6NTfah"
 
-# 🔹 BUTTONS
-def get_buttons():
+CHANNEL_210 = "https://t.me/+Rw0Ok8hEhbI1N2U1"
+CHANNEL_310 = "https://t.me/+Rw0Ok8hEhbI1N2U1"
+CHANNEL_510 = "https://t.me/riyoraxsupport"
+
+SUPPORT = "@riyoraxsupport"
+
+# 🔥 MEMORY DATABASE
+users_db = {}
+
+# 🔘 BUTTONS
+def plans():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("💳 ₹210 Photo Access", url=PAY_210)],
-        [InlineKeyboardButton("💳 ₹310 Video Access", url=PAY_310)],
-        [InlineKeyboardButton("💳 ₹510 Video Call + VIP", url=PAY_510)],
-        [InlineKeyboardButton("✅ I Paid ₹210", callback_data="paid_210")],
-        [InlineKeyboardButton("✅ I Paid ₹310", callback_data="paid_310")],
-        [InlineKeyboardButton("✅ I Paid ₹510", callback_data="paid_510")],
-        [InlineKeyboardButton("🆘 Support", url=f"https://t.me/{SUPPORT_USERNAME}")]
+        [InlineKeyboardButton("💎 ₹210 Photo Access", url=PAY_210)],
+        [InlineKeyboardButton("🎬 ₹310 Video Access", url=PAY_310)],
+        [InlineKeyboardButton("📞 ₹510 Video Call Access", url=PAY_510)]
     ])
 
-def plan_text():
-    return (
-        "🔥 PREMIUM ACCESS 🔥\n\n"
-        "💎 ₹210 → Photo Access\n"
-        "🎬 ₹310 → Video Access\n"
-        "📞 ₹510 → Video Call + VIP\n\n"
-        "⚡ Limited Offer – Choose now!"
+# 🚀 START
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+
+    await update.message.reply_photo(
+        PHOTO1,
+        caption="🔥 Choose your plan\n\nAfter payment type:\n/paid 210 or /paid 310 or /paid 510",
+        reply_markup=plans()
     )
 
-# 🔹 START
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_photo(PHOTO1, caption=plan_text(), reply_markup=get_buttons())
-    asyncio.create_task(followup(update, context))
+    # followups
+    asyncio.create_task(send_later(update, context, 900, PHOTO2))
+    asyncio.create_task(send_later(update, context, 1800, PHOTO3))
+    asyncio.create_task(reminder(update, context))
 
-# 🔹 FOLLOWUP
-async def followup(update, context):
-    chat_id = update.effective_chat.id
+# ⏱ follow messages
+async def send_later(update, context, delay, photo):
+    await asyncio.sleep(delay)
+    await context.bot.send_photo(
+        update.effective_chat.id,
+        photo,
+        caption="⏳ Limited offer! Unlock now 🔥",
+        reply_markup=plans()
+    )
 
-    await asyncio.sleep(900)
-    await context.bot.send_photo(chat_id, PHOTO2, caption="⏳ Hurry!\n\n"+plan_text(), reply_markup=get_buttons())
-
-    await asyncio.sleep(900)
-    await context.bot.send_photo(chat_id, PHOTO3, caption="🔥 Last Chance!\n\n"+plan_text(), reply_markup=get_buttons())
-
+async def reminder(update, context):
     await asyncio.sleep(1200)
-    await context.bot.send_message(chat_id, "⚡ Closing soon!\n\n"+plan_text(), reply_markup=get_buttons())
+    await context.bot.send_message(update.effective_chat.id, "⚠️ Last chance!")
 
-    await asyncio.sleep(1500)
-    await context.bot.send_message(chat_id, "🚀 Final Reminder!\n\n"+plan_text(), reply_markup=get_buttons())
-
-# 🔹 I PAID
+# 💰 PAID SYSTEM
 async def paid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user = query.from_user
-    plan = query.data.split("_")[1]
+    user = update.effective_user
 
-    await query.answer()
+    try:
+        plan = context.args[0]
+    except:
+        await update.message.reply_text("❌ Use: /paid 210 /310 /510")
+        return
+
+    username = user.username if user.username else "No Username"
+
+    # save user
+    users_db[user.id] = {
+        "name": user.first_name,
+        "username": username,
+        "plan": plan
+    }
 
     await context.bot.send_message(
         ADMIN_ID,
-        f"💰 Payment Request\n\nUser: @{user.username}\nID: {user.id}\nPlan: ₹{plan}"
+        f"""
+💰 NEW PAYMENT REQUEST
+
+👤 Name: {user.first_name}
+🔗 Username: @{username}
+🆔 ID: {user.id}
+💎 Plan: ₹{plan}
+
+👉 Approve:
+/access {user.id} {plan}
+
+👉 Reject:
+/unaccess {user.id}
+"""
     )
 
-    await query.message.reply_text("✅ Request sent to admin!")
+    await update.message.reply_text("✅ Request sent to admin")
 
-# 🔹 ACCESS COMMAND
+# ✅ ACCESS
 async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -87,47 +107,43 @@ async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = int(context.args[0])
         plan = context.args[1]
-
-        if plan == "210":
-            msg = f"✅ Photo Access Granted!\n👉 {PHOTO_CHANNEL}"
-
-        elif plan == "310":
-            msg = f"🎬 Video Access Granted!\n👉 {VIDEO_CHANNEL}"
-
-        elif plan == "510":
-            msg = f"🔥 VIP Access Granted!\n👉 {VIP_CHANNEL}\n📞 Video Call Available!"
-
-        await context.bot.send_message(user_id, msg)
-        await update.message.reply_text("✅ Access given")
-
     except:
         await update.message.reply_text("❌ Use: /access USER_ID PLAN")
+        return
 
-# 🔹 UNACCESS COMMAND
+    if plan == "210":
+        link = CHANNEL_210
+    elif plan == "310":
+        link = CHANNEL_310
+    elif plan == "510":
+        link = CHANNEL_510
+    else:
+        return
+
+    await context.bot.send_message(user_id, f"✅ Access Granted!\n{link}")
+    await update.message.reply_text("✅ Approved")
+
+# ❌ UNACCESS
 async def unaccess(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
 
     try:
         user_id = int(context.args[0])
-
-        await context.bot.send_message(
-            user_id,
-            "❌ Access Denied!\nPayment not confirmed.\nContact support."
-        )
-
-        await update.message.reply_text("❌ Access removed")
-
     except:
         await update.message.reply_text("❌ Use: /unaccess USER_ID")
+        return
 
-# 🔹 RUN
+    await context.bot.send_message(user_id, "❌ Payment not confirmed")
+    await update.message.reply_text("❌ Rejected")
+
+# ⚙️ RUN
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("paid", paid))
 app.add_handler(CommandHandler("access", access))
 app.add_handler(CommandHandler("unaccess", unaccess))
-app.add_handler(CallbackQueryHandler(paid, pattern="paid_"))
 
-print("Bot Running...")
+print("🔥 Bot Running...")
 app.run_polling()
