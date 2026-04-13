@@ -1,8 +1,12 @@
-import asyncio
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+import asyncio
 
+# 🔐 BOT TOKEN
 TOKEN = "8621358668:AAEDOhQKuPONhjpYunWONwnlZf46lT1IPZM"
+
+# 👑 ADMIN ID
 ADMIN_ID = 6556890316
 
 # 🔥 LINKS
@@ -20,110 +24,101 @@ CHANNEL_510 = "https://t.me/riyoraxsupport"
 
 SUPPORT = "@riyoraxsupport"
 
-# 🔥 MEMORY DATABASE
-users_db = {}
+logging.basicConfig(level=logging.INFO)
 
-# 🔘 BUTTONS
-def plans():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("💎 ₹210 Photo Access", url=PAY_210)],
-        [InlineKeyboardButton("🎬 ₹310 Video Access", url=PAY_310)],
-        [InlineKeyboardButton("📞 ₹510 Video Call Access", url=PAY_510)]
-    ])
-
-# 🚀 START
+# 🟢 START
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
 
+    keyboard = [
+        [InlineKeyboardButton("💎 ₹210 Photo Access", url=PAY_210)],
+        [InlineKeyboardButton("🔥 ₹310 Video Access", url=PAY_310)],
+        [InlineKeyboardButton("👑 ₹510 Video Call Access", url=PAY_510)],
+        [InlineKeyboardButton("✅ I Paid", callback_data="paid")],
+        [InlineKeyboardButton("📞 Support", url=f"https://t.me/{SUPPORT.replace('@','')}")]
+    ]
+
     await update.message.reply_photo(
-        PHOTO1,
-        caption="🔥 Choose your plan\n\nAfter payment type:\n/paid 210 or /paid 310 or /paid 510",
-        reply_markup=plans()
+        photo=PHOTO1,
+        caption="🔥 Choose Your Plan & Unlock Access 🔥",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-    # followups
-    asyncio.create_task(send_later(update, context, 900, PHOTO2))
-    asyncio.create_task(send_later(update, context, 1800, PHOTO3))
-    asyncio.create_task(reminder(update, context))
+    asyncio.create_task(send_followups(update, context))
 
-# ⏱ follow messages
-async def send_later(update, context, delay, photo):
-    await asyncio.sleep(delay)
-    await context.bot.send_photo(
-        update.effective_chat.id,
-        photo,
-        caption="⏳ Limited offer! Unlock now 🔥",
-        reply_markup=plans()
-    )
 
-async def reminder(update, context):
-    await asyncio.sleep(1200)
-    await context.bot.send_message(update.effective_chat.id, "⚠️ Last chance!")
+# ⏳ AUTO FOLLOW MESSAGES
+async def send_followups(update, context):
+    chat_id = update.effective_chat.id
 
-# 💰 PAID SYSTEM
-async def paid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
+    keyboard = [
+        [InlineKeyboardButton("💎 ₹210 Photo Access", url=PAY_210)],
+        [InlineKeyboardButton("🔥 ₹310 Video Access", url=PAY_310)],
+        [InlineKeyboardButton("👑 ₹510 Video Call Access", url=PAY_510)],
+        [InlineKeyboardButton("📞 Support", url=f"https://t.me/{SUPPORT.replace('@','')}")]
+    ]
 
-    try:
-        plan = context.args[0]
-    except:
-        await update.message.reply_text("❌ Use: /paid 210 /310 /510")
-        return
+    await asyncio.sleep(900)
+    await context.bot.send_photo(chat_id, PHOTO2, caption="⏳ Limited Time Offer!", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    username = user.username if user.username else "No Username"
+    await asyncio.sleep(900)
+    await context.bot.send_photo(chat_id, PHOTO3, caption="⚡ Last Chance to Unlock Access!", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # save user
-    users_db[user.id] = {
-        "name": user.first_name,
-        "username": username,
-        "plan": plan
-    }
 
-    await context.bot.send_message(
-        ADMIN_ID,
-        f"""
+# 💰 I PAID CLICK
+async def paid_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user = query.from_user
+
+    username = f"@{user.username}" if user.username else "No Username"
+
+    msg = f"""
 💰 NEW PAYMENT REQUEST
 
 👤 Name: {user.first_name}
-🔗 Username: @{username}
+🔗 Username: {username}
 🆔 ID: {user.id}
-💎 Plan: ₹{plan}
 
 👉 Approve:
-/access {user.id} {plan}
+/access {user.id} 210
 
 👉 Reject:
 /unaccess {user.id}
 """
-    )
 
-    await update.message.reply_text("✅ Request sent to admin")
+    await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
 
-# ✅ ACCESS
+    await query.answer("Request sent to admin!")
+    await query.message.reply_text("✅ Request sent! Please wait for approval.")
+
+
+# ✅ ACCESS COMMAND
 async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
 
     try:
         user_id = int(context.args[0])
-        plan = context.args[1]
+        plan = int(context.args[1])
     except:
         await update.message.reply_text("❌ Use: /access USER_ID PLAN")
         return
 
-    if plan == "210":
+    if plan == 210:
         link = CHANNEL_210
-    elif plan == "310":
+    elif plan == 310:
         link = CHANNEL_310
-    elif plan == "510":
+    elif plan == 510:
         link = CHANNEL_510
     else:
+        await update.message.reply_text("❌ Invalid plan")
         return
 
-    await context.bot.send_message(user_id, f"✅ Access Granted!\n{link}")
-    await update.message.reply_text("✅ Approved")
+    await context.bot.send_message(user_id, f"✅ Access Granted!\nJoin here: {link}")
+    await update.message.reply_text("✅ Done")
 
-# ❌ UNACCESS
+
+# ❌ UNACCESS COMMAND
 async def unaccess(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -134,16 +129,17 @@ async def unaccess(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Use: /unaccess USER_ID")
         return
 
-    await context.bot.send_message(user_id, "❌ Payment not confirmed")
-    await update.message.reply_text("❌ Rejected")
+    await context.bot.send_message(user_id, "❌ Access Denied by Admin")
+    await update.message.reply_text("❌ Done")
 
-# ⚙️ RUN
+
+# 🚀 RUN BOT
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("paid", paid))
 app.add_handler(CommandHandler("access", access))
 app.add_handler(CommandHandler("unaccess", unaccess))
+app.add_handler(CallbackQueryHandler(paid_callback, pattern="paid"))
 
-print("🔥 Bot Running...")
+print("Bot Running...")
 app.run_polling()
