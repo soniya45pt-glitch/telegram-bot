@@ -5,8 +5,7 @@ import asyncio
 # 🔑 TOKEN
 TOKEN = "8621358668:AAEDOhQKuPONhjpYunWONwnlZf46lT1IPZM"
 
-
-# 👑 ADMIN
+# 👑 ADMIN ID
 ADMIN_ID = 6556890316
 
 # 📸 PHOTOS
@@ -19,7 +18,7 @@ PAY_210 = "https://rzp.io/rzp/EeA4ZDf"
 PAY_310 = "https://rzp.io/rzp/ToyNdQ5"
 PAY_510 = "https://rzp.io/rzp/Lk6NTfah"
 
-# 🔗 CHANNELS
+# 🔗 CHANNEL LINKS
 CHANNEL_210 = "https://t.me/+Rw0Ok8hEhbI1N2U1"
 CHANNEL_310 = "https://t.me/+Rw0Ok8hEhbI1N2U1"
 CHANNEL_510 = "https://t.me/riyoraxsupport"
@@ -37,4 +36,125 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await update.message.reply_photo(
-        photo=
+        photo=PHOTO1,
+        caption="🔥 Choose Your Plan & Unlock Access 🔥",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+    asyncio.create_task(auto_messages(update, context))
+
+
+# ================= AUTO MESSAGE =================
+async def auto_messages(update, context):
+    chat_id = update.effective_chat.id
+
+    await asyncio.sleep(900)
+    await context.bot.send_photo(chat_id, PHOTO2, caption="🔥 Limited Offer!")
+
+    await asyncio.sleep(900)
+    await context.bot.send_photo(chat_id, PHOTO3, caption="⚡ Last Chance!")
+
+    await asyncio.sleep(1200)
+    await context.bot.send_message(chat_id, "⚠️ Access still locked!")
+
+    await asyncio.sleep(300)
+    await context.bot.send_message(chat_id, "🔥 Final Reminder!")
+
+# ================= BUTTON =================
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user = query.from_user
+
+    await query.answer()
+
+    plan = None
+    link = None
+
+    if query.data == "pay_210":
+        plan = "210"
+        link = PAY_210
+
+    elif query.data == "pay_310":
+        plan = "310"
+        link = PAY_310
+
+    elif query.data == "pay_510":
+        plan = "510"
+        link = PAY_510
+
+    if not plan:
+        return
+
+    # 👤 USER ko payment link
+    await query.message.reply_text(f"💳 Pay here:\n{link}")
+
+    # 👑 ADMIN ko request
+    text = f"""
+💰 NEW PAYMENT CLICK
+
+👤 Name: {user.first_name}
+🔗 Username: @{user.username if user.username else 'NoUsername'}
+🆔 ID: {user.id}
+💎 Plan: ₹{plan}
+
+👉 Approve:
+/access {user.id} {plan}
+
+👉 Reject:
+/unaccess {user.id}
+"""
+
+    try:
+        await context.bot.send_message(ADMIN_ID, text)
+    except Exception as e:
+        print("ADMIN ERROR:", e)
+
+
+# ================= ACCESS =================
+async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    try:
+        user_id = int(context.args[0])
+        plan = context.args[1]
+
+        if plan == "210":
+            link = CHANNEL_210
+        elif plan == "310":
+            link = CHANNEL_310
+        else:
+            link = CHANNEL_510
+
+        await context.bot.send_message(user_id, f"✅ Access Granted:\n{link}")
+        await update.message.reply_text("✅ Done")
+
+    except:
+        await update.message.reply_text("Use: /access USER_ID PLAN")
+
+
+# ================= UNACCESS =================
+async def unaccess(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    try:
+        user_id = int(context.args[0])
+
+        await context.bot.send_message(user_id, "❌ Access Denied")
+        await update.message.reply_text("❌ Done")
+
+    except:
+        await update.message.reply_text("Use: /unaccess USER_ID")
+
+
+# ================= MAIN =================
+app = ApplicationBuilder().token(TOKEN).build()
+
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CallbackQueryHandler(button_handler))
+app.add_handler(CommandHandler("access", access))
+app.add_handler(CommandHandler("unaccess", unaccess))
+
+print("Bot Running...")
+app.run_polling()
