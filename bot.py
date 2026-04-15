@@ -6,6 +6,7 @@ import asyncio
 # 🔐 BOT TOKEN
 TOKEN = "8621358668:AAEDOhQKuPONhjpYunWONwnlZf46lT1IPZM"
 
+
 # 👑 ADMIN ID
 ADMIN_ID = 6556890316
 
@@ -26,13 +27,12 @@ SUPPORT = "@riyoraxsupport"
 
 logging.basicConfig(level=logging.INFO)
 
-# 🟢 BUTTONS
+# 🟢 BUTTONS (NO I PAID)
 def get_buttons():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("💎 ₹210 Photo Access", url=PAY_210)],
-        [InlineKeyboardButton("🎬 ₹310 Video Access", url=PAY_310)],
-        [InlineKeyboardButton("📞 ₹510 Video Call Access", url=PAY_510)],
-        [InlineKeyboardButton("✅ I Paid", callback_data="paid")],
+        [InlineKeyboardButton("💎 ₹210 Photo Access", callback_data="pay_210")],
+        [InlineKeyboardButton("🎬 ₹310 Video Access", callback_data="pay_310")],
+        [InlineKeyboardButton("📞 ₹510 Video Call Access", callback_data="pay_510")],
         [InlineKeyboardButton("📞 Support", url=f"https://t.me/{SUPPORT.replace('@','')}")]
     ])
 
@@ -56,8 +56,8 @@ async def followup(update, context):
     await asyncio.sleep(900)
     await context.bot.send_photo(chat_id, PHOTO3, caption="🔥 Last Chance!", reply_markup=get_buttons())
 
-# 💰 I PAID
-async def paid(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# 💰 PAYMENT CLICK HANDLE
+async def handle_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user = query.from_user
 
@@ -65,29 +65,36 @@ async def paid(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     username = f"@{user.username}" if user.username else "No Username"
 
+    if query.data == "pay_210":
+        plan = 210
+        pay_link = PAY_210
+    elif query.data == "pay_310":
+        plan = 310
+        pay_link = PAY_310
+    elif query.data == "pay_510":
+        plan = 510
+        pay_link = PAY_510
+
+    # 🔥 ADMIN REQUEST
     text = f"""
-💰 *NEW PAYMENT REQUEST*
+💰 NEW PAYMENT CLICK
 
 👤 Name: {user.first_name}
 🔗 Username: {username}
-🆔 ID: `{user.id}`
+🆔 ID: {user.id}
+💎 Plan: ₹{plan}
 
-👉 Approve:
-`/access {user.id} 210`
-`/access {user.id} 310`
-`/access {user.id} 510`
+Approve:
+/access {user.id} {plan}
 
-👉 Reject:
-`/unaccess {user.id}`
+Reject:
+/unaccess {user.id}
 """
 
-    await context.bot.send_message(
-        chat_id=ADMIN_ID,
-        text=text,
-        parse_mode="Markdown"
-    )
+    await context.bot.send_message(ADMIN_ID, text)
 
-    await query.message.reply_text("✅ Request sent! Wait for admin approval.")
+    # 💸 USER KO LINK
+    await query.message.reply_text(f"💳 Complete your payment here:\n{pay_link}")
 
 # ✅ ACCESS
 async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -98,7 +105,7 @@ async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = int(context.args[0])
         plan = int(context.args[1])
     except:
-        await update.message.reply_text("❌ Use: /access USER_ID PLAN")
+        await update.message.reply_text("Use: /access USER_ID PLAN")
         return
 
     if plan == 210:
@@ -108,10 +115,10 @@ async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif plan == 510:
         link = CHANNEL_510
     else:
-        await update.message.reply_text("❌ Invalid plan")
+        await update.message.reply_text("Invalid plan")
         return
 
-    await context.bot.send_message(user_id, f"✅ Access Granted!\nJoin here:\n{link}")
+    await context.bot.send_message(user_id, f"✅ Access Granted!\nJoin:\n{link}")
     await update.message.reply_text("✅ Done")
 
 # ❌ UNACCESS
@@ -122,10 +129,10 @@ async def unaccess(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = int(context.args[0])
     except:
-        await update.message.reply_text("❌ Use: /unaccess USER_ID")
+        await update.message.reply_text("Use: /unaccess USER_ID")
         return
 
-    await context.bot.send_message(user_id, "❌ Access Denied by Admin")
+    await context.bot.send_message(user_id, "❌ Access Denied")
     await update.message.reply_text("❌ Done")
 
 # 🚀 RUN
@@ -134,7 +141,7 @@ app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("access", access))
 app.add_handler(CommandHandler("unaccess", unaccess))
-app.add_handler(CallbackQueryHandler(paid, pattern="paid"))
+app.add_handler(CallbackQueryHandler(handle_payment, pattern="pay_"))
 
 print("Bot Running...")
 app.run_polling()
