@@ -144,7 +144,7 @@ async def unaccess(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await context.bot.send_message(
             chat_id=user_id,
-            text="❌ Payment not confirmed. Contact support."
+            text="❌ Payment not confirmed."
         )
 
         await update.message.reply_text("❌ Access removed")
