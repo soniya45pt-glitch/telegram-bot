@@ -5,6 +5,7 @@ import asyncio
 # 🔑 TOKEN
 TOKEN = "8621358668:AAEDOhQKuPONhjpYunWONwnlZf46lT1IPZM"
 
+
 # 👑 ADMIN ID
 ADMIN_ID = 6556890316
 
@@ -44,7 +45,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(auto_messages(update, context))
 
 
-# ================= AUTO MESSAGE =================
+# ================= AUTO MESSAGES =================
 async def auto_messages(update, context):
     chat_id = update.effective_chat.id
 
@@ -60,6 +61,7 @@ async def auto_messages(update, context):
     await asyncio.sleep(300)
     await context.bot.send_message(chat_id, "🔥 Final Reminder!")
 
+
 # ================= BUTTON =================
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -67,47 +69,42 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.answer()
 
-    plan = None
-    link = None
-
     if query.data == "pay_210":
         plan = "210"
         link = PAY_210
-
     elif query.data == "pay_310":
         plan = "310"
         link = PAY_310
-
     elif query.data == "pay_510":
         plan = "510"
         link = PAY_510
-
-    if not plan:
+    else:
         return
 
     # 👤 USER ko payment link
     await query.message.reply_text(f"💳 Pay here:\n{link}")
 
-    # 👑 ADMIN ko request
+    # 👑 ADMIN ko request (COPY FIXED)
     text = f"""
 💰 NEW PAYMENT CLICK
 
 👤 Name: {user.first_name}
 🔗 Username: @{user.username if user.username else 'NoUsername'}
-🆔 ID: {user.id}
+🆔 ID: `{user.id}`
 💎 Plan: ₹{plan}
 
 👉 Approve:
-/access {user.id} {plan}
+`/access {user.id} {plan}`
 
 👉 Reject:
-/unaccess {user.id}
+`/unaccess {user.id}`
 """
 
-    try:
-        await context.bot.send_message(ADMIN_ID, text)
-    except Exception as e:
-        print("ADMIN ERROR:", e)
+    await context.bot.send_message(
+        chat_id=ADMIN_ID,
+        text=text,
+        parse_mode="Markdown"
+    )
 
 
 # ================= ACCESS =================
@@ -126,11 +123,15 @@ async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             link = CHANNEL_510
 
-        await context.bot.send_message(user_id, f"✅ Access Granted:\n{link}")
-        await update.message.reply_text("✅ Done")
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"✅ Payment Approved!\n\n🔓 Join here:\n{link}"
+        )
+
+        await update.message.reply_text("✅ Access given")
 
     except:
-        await update.message.reply_text("Use: /access USER_ID PLAN")
+        await update.message.reply_text("❌ Use: /access USER_ID PLAN")
 
 
 # ================= UNACCESS =================
@@ -141,11 +142,15 @@ async def unaccess(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = int(context.args[0])
 
-        await context.bot.send_message(user_id, "❌ Access Denied")
-        await update.message.reply_text("❌ Done")
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Payment not confirmed. Contact support."
+        )
+
+        await update.message.reply_text("❌ Access removed")
 
     except:
-        await update.message.reply_text("Use: /unaccess USER_ID")
+        await update.message.reply_text("❌ Use: /unaccess USER_ID")
 
 
 # ================= MAIN =================
