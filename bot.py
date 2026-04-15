@@ -6,7 +6,7 @@ import asyncio
 TOKEN = "8621358668:AAEDOhQKuPONhjpYunWONwnlZf46lT1IPZM"
 
 
-# 👑 ADMIN ID
+# 👑 ADMIN
 ADMIN_ID = 6556890316
 
 # 📸 PHOTOS
@@ -45,7 +45,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(auto_messages(update, context))
 
 
-# ================= AUTO MESSAGES =================
+# ================= AUTO MESSAGE =================
 async def auto_messages(update, context):
     chat_id = update.effective_chat.id
 
@@ -81,10 +81,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         return
 
-    # 👤 USER ko payment link
+    # USER ko link
     await query.message.reply_text(f"💳 Pay here:\n{link}")
 
-    # 👑 ADMIN ko request (COPY FIXED)
+    # ADMIN ko request (COPY FIX)
     text = f"""
 💰 NEW PAYMENT CLICK
 
@@ -113,8 +113,14 @@ async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        user_id = int(context.args[0])
-        plan = context.args[1]
+        text = update.message.text.split()
+
+        if len(text) < 3:
+            await update.message.reply_text("❌ Use: /access USER_ID PLAN")
+            return
+
+        user_id = int(text[1])
+        plan = text[2]
 
         if plan == "210":
             link = CHANNEL_210
@@ -130,8 +136,9 @@ async def access(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text("✅ Access given")
 
-    except:
-        await update.message.reply_text("❌ Use: /access USER_ID PLAN")
+    except Exception as e:
+        print(e)
+        await update.message.reply_text("❌ Error")
 
 
 # ================= UNACCESS =================
@@ -140,17 +147,24 @@ async def unaccess(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        user_id = int(context.args[0])
+        text = update.message.text.split()
+
+        if len(text) < 2:
+            await update.message.reply_text("❌ Use: /unaccess USER_ID")
+            return
+
+        user_id = int(text[1])
 
         await context.bot.send_message(
             chat_id=user_id,
-            text="❌ Payment not confirmed."
+            text="❌ Payment not confirmed. Contact support."
         )
 
         await update.message.reply_text("❌ Access removed")
 
-    except:
-        await update.message.reply_text("❌ Use: /unaccess USER_ID")
+    except Exception as e:
+        print(e)
+        await update.message.reply_text("❌ Error")
 
 
 # ================= MAIN =================
